@@ -5,13 +5,16 @@ import "unsafe"
 const SoftwareID = "Spy2Go 1.0"
 
 const SpyserverProtocolVersion = ((2) << 24) | ((0) << 16) | (1558)
-const SpyserverMaxCommandBodySize = 256
+//const SpyserverMaxCommandBodySize = 256
 const SpyserverMaxMessageBodySize = 1 << 20
 const SpyserverMaxDisplayPixels = 1 << 15
 const SpyserverMinDisplayPixels = 100
 const SpyserverMaxFFTDBRange = 150
 const SpyserverMinFFTDBRange = 10
 const SpyserverMaxFFTDBOffset = 100
+
+const DefaultFFTRange = 127
+const DefaultDisplayPixels = 2000
 
 const (
 	DeviceInvalid   = 0
@@ -35,27 +38,27 @@ var DeviceName = map[uint32]string {
 }
 
 const (
-	CmdHello      = 0
-	CmdGetSetting = 1
-	CmdSetSetting = 2
-	CmdPing       = 3
+	cmdHello      = 0
+	cmdGetSetting = 1
+	cmdSetSetting = 2
+	cmdPing       = 3
 )
 
 const (
-	SettingStreamingMode    = 0
-	SettingStreamingEnabled = 1
-	SettingGain             = 2
+	settingStreamingMode    = 0
+	settingStreamingEnabled = 1
+	settingGain             = 2
 
-	SettingIqFormat     = 100
-	SettingIqFrequency  = 101
-	SettingIqDecimation = 102
+	settingIqFormat     = 100
+	settingIqFrequency  = 101
+	settingIqDecimation = 102
 
-	SettingFFTFormat        = 200
-	SettingFFTFrequency     = 201
-	SettingFFTDecimation    = 202
-	SettingFFTDbOffset      = 203
-	SettingFFTDbRange       = 204
-	SettingFFTDisplayPixels = 205
+	settingFFTFormat        = 200
+	settingFFTFrequency     = 201
+	settingFFTDecimation    = 202
+	settingFFTDbOffset      = 203
+	settingFFTDbRange       = 204
+	settingFFTDisplayPixels = 205
 )
 
 const (
@@ -67,65 +70,65 @@ const (
 
 const (
 	StreamModeIQOnly  = StreamTypeIQ
-	StreamModeAFOnly  = StreamTypeAF
+	//StreamModeAFOnly  = StreamTypeAF
 	StreamModeFFTOnly = StreamTypeFFT
-	StreamModeFFTIq   = StreamTypeFFT | StreamTypeIQ
-	StreamModeFFTAf   = StreamTypeFFT | StreamTypeAF
+	StreamModeFFTIQ   = StreamTypeFFT | StreamTypeIQ
+	//StreamModeFFTAF   = StreamTypeFFT | StreamTypeAF
 )
 
 const (
-	StreamFormatDint4      = 0
+	//StreamFormatDint4      = 0
 	StreamFormatUint8      = 1
 	StreamFormatInt16      = 2
-	StreamFormatInt24      = 3
+	//StreamFormatInt24      = 3
 	StreamFormatFloat      = 4
-	StreamFormatCompressed = 5
+	//StreamFormatCompressed = 5
 )
 
 const (
-	MsgTypeDeviceInfo  = 0
-	MsgTypeClientSync  = 1
-	MsgTypePong        = 2
-	MsgTypeReadSetting = 3
+	msgTypeDeviceInfo  = 0
+	msgTypeClientSync  = 1
+	msgTypePong        = 2
+	msgTypeReadSetting = 3
 
-	MsgTypeUint8IQ      = 100
-	MsgTypeInt16IQ      = 101
-	MsgTypeInt24IQ      = 102
-	MsgTypeFloatIQ      = 103
-	MsgTypeCompressedIQ = 104
+	msgTypeUint8IQ      = 100
+	msgTypeInt16IQ      = 101
+	msgTypeInt24IQ      = 102
+	msgTypeFloatIQ      = 103
+	msgTypeCompressedIQ = 104
 
-	MsgTypeUint8AF      = 200
-	MsgTypeInt16AF      = 201
-	MsgTypeInt24AF      = 202
-	MsgTypeFloatAF      = 203
-	MsgTypeCompressedAF = 204
+	msgTypeUint8AF      = 200
+	msgTypeInt16AF      = 201
+	msgTypeInt24AF      = 202
+	msgTypeFloatAF      = 203
+	msgTypeCompressedAF = 204
 
-	MsgTypeDint4FFT      = 300
-	MsgTypeUint8FFT      = 301
-	MsgTypeCompressedFFT = 302
+	msgTypeDint4FFT      = 300
+	msgTypeUint8FFT      = 301
+	msgTypeCompressedFFT = 302
 )
 
 const (
-	ParserAcquiringHeader = iota
-	ParserReadingData = iota
+	parserAcquiringHeader = iota
+	parserReadingData = iota
 )
 
-type ClientHandshake struct {
-	ProtocolVersion uint32
-	ClientNameLength uint32
-}
+//type clientHandshake struct {
+//	ProtocolVersion uint32
+//	ClientNameLength uint32
+//}
 
-type CommandHeader struct {
+type commandHeader struct {
 	CommandType uint32
 	BodySize uint32
 }
 
-type SettingTarget struct {
-	StreamType uint32
-	SettingType uint32
-}
+//type settingTarget struct {
+//	StreamType uint32
+//	SettingType uint32
+//}
 
-type MessageHeader struct {
+type messageHeader struct {
 	ProtocolID uint32
 	MessageType uint32
 	StreamType uint32
@@ -133,7 +136,7 @@ type MessageHeader struct {
 	BodySize uint32
 }
 
-const MessageHeaderSize = uint32(unsafe.Sizeof(MessageHeader{}))
+const messageHeaderSize = uint32(unsafe.Sizeof(messageHeader{}))
 
 type DeviceInfo struct {
 	DeviceType uint32
@@ -147,7 +150,7 @@ type DeviceInfo struct {
 	MaximumFrequency uint32
 }
 
-type ClientSync struct {
+type clientSync struct {
 	CanControl uint32
 	Gain uint32
 	DeviceCenterFrequency uint32
@@ -169,10 +172,16 @@ type ComplexUInt8 struct {
 	imag uint8
 }
 
-type CallbackBase interface {
-	OnFloatIQ([]complex64)
-	OnInt16IQ([]ComplexInt16)
-	OnUInt8IQ([]ComplexUInt8)
-	OnFFT([]uint8)
-	OnDeviceSync()
+type Complex64SamplesCallback func(data []complex64)
+type Complex32SamplesCallback func(data []ComplexInt16)
+type Complex16SamplesCallback func(data []ComplexUInt8)
+type FFTSamplesCallback func(data []uint8)
+type DeviceSyncCallback func()
+
+type CallbackBase struct {
+	OnFloatIQ Complex64SamplesCallback
+	OnInt16IQ Complex32SamplesCallback
+	OnUInt8IQ Complex16SamplesCallback
+	OnFFT FFTSamplesCallback
+	OnDeviceSync DeviceSyncCallback
 }
