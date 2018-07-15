@@ -13,8 +13,13 @@ const SpyserverMaxFFTDBRange = 150
 const SpyserverMinFFTDBRange = 10
 const SpyserverMaxFFTDBOffset = 100
 
+const SpyserverMinGain = 0
+const SpyserverMaxGain = 16
+
 const DefaultFFTRange = 127
 const DefaultDisplayPixels = 2000
+
+const InvalidValue = 0xFFFFFFFF
 
 const (
 	DeviceInvalid   = 0
@@ -49,9 +54,9 @@ const (
 	settingStreamingEnabled = 1
 	settingGain             = 2
 
-	settingIqFormat     = 100
-	settingIqFrequency  = 101
-	settingIqDecimation = 102
+	settingIqFormat     	= 100
+	settingIqFrequency  	= 101
+	settingIqDecimation 	= 102
 
 	settingFFTFormat        = 200
 	settingFFTFrequency     = 201
@@ -93,19 +98,19 @@ const (
 
 	msgTypeUint8IQ      = 100
 	msgTypeInt16IQ      = 101
-	msgTypeInt24IQ      = 102
+	//msgTypeInt24IQ      = 102
 	msgTypeFloatIQ      = 103
-	msgTypeCompressedIQ = 104
+	//msgTypeCompressedIQ = 104
 
-	msgTypeUint8AF      = 200
-	msgTypeInt16AF      = 201
-	msgTypeInt24AF      = 202
-	msgTypeFloatAF      = 203
-	msgTypeCompressedAF = 204
+	//msgTypeUint8AF      = 200
+	//msgTypeInt16AF      = 201
+	//msgTypeInt24AF      = 202
+	//msgTypeFloatAF      = 203
+	//msgTypeCompressedAF = 204
 
-	msgTypeDint4FFT      = 300
+	//msgTypeDint4FFT      = 300
 	msgTypeUint8FFT      = 301
-	msgTypeCompressedFFT = 302
+	//msgTypeCompressedFFT = 302
 )
 
 const (

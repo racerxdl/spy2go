@@ -18,8 +18,7 @@ func min(a, b uint32) uint32 {
 
 type Spyserver struct {
 
-	hostname string
-	port int
+	fullhostname string
 	callback *CallbackBase
 	client net.Conn
 
@@ -53,19 +52,20 @@ type Spyserver struct {
 	channelCenterFrequency  uint32
 	DisplayCenterFrequency  uint32
 
-	currentSampleRate uint32
+	currentSampleRate           uint32
+	currentDisplaySampleRate    uint32
 	channelDecimationStageCount uint32
-	displayOffset uint32
-	displayRange uint32
-	displayPixels uint32
+	displayDecimationStageCount uint32
+	displayOffset               int32
+	displayRange                int32
+	displayPixels               uint32
 
 	msgChannel chan []uint8
 }
 
-func MakeSpyserver(hostname string, port int) *Spyserver {
+func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
 	return &Spyserver{
-		hostname: hostname,
-		port: port,
+		fullhostname: fullhostname,
 		callback: nil,
 		terminated: false,
 		gotDeviceInfo: false,
@@ -81,6 +81,29 @@ func MakeSpyserver(hostname string, port int) *Spyserver {
 		displayRange: DefaultFFTRange,
 		displayPixels: DefaultDisplayPixels,
 		streamingMode: StreamModeIQOnly,
+		displayDecimationStageCount: 1,
+	}
+}
+
+func MakeSpyserver(hostname string, port int) *Spyserver {
+	return &Spyserver{
+		fullhostname: fmt.Sprintf("%s:%d", hostname, port),
+		callback: nil,
+		terminated: false,
+		gotDeviceInfo: false,
+		gotSyncInfo: false,
+		parserPhase: parserAcquiringHeader,
+		Streaming: false,
+		CanControl: false,
+		IsConnected: false,
+		availableSampleRates: []uint32{},
+		headerBuffer: make([]uint8, messageHeaderSize),
+
+		displayOffset: 0,
+		displayRange: DefaultFFTRange,
+		displayPixels: DefaultDisplayPixels,
+		streamingMode: StreamModeIQOnly,
+		displayDecimationStageCount: 1,
 	}
 }
 
@@ -129,8 +152,9 @@ func (f *Spyserver) onConnect() {
 	f.setSetting(settingIqFormat, []uint32 { StreamFormatInt16 })
 	f.setSetting(settingFFTFormat, []uint32 { StreamFormatUint8 })
 	f.setSetting(settingFFTDisplayPixels, []uint32 { f.displayPixels })
-	f.setSetting(settingFFTDbOffset, []uint32 { f.displayOffset })
-	f.setSetting(settingFFTDbRange, []uint32 { f.displayRange })
+	f.setSetting(settingFFTDbOffset, []uint32 { uint32(f.displayOffset - 50) })
+	f.setSetting(settingFFTDbRange, []uint32 { uint32(f.displayRange) })
+	f.setSetting(settingFFTDecimation, []uint32 { 1 });
 
 	var sampleRates = make([]uint32, f.deviceInfo.DecimationStageCount)
 	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
@@ -313,7 +337,7 @@ func (f *Spyserver) processClientSync() {
 	f.gain = clientSync.Gain
 	f.DeviceCenterFrequency = clientSync.DeviceCenterFrequency
 	f.channelCenterFrequency = clientSync.IQCenterFrequency
-	f.DisplayCenterFrequency = clientSync.FFTCenterFrequency
+	//f.DisplayCenterFrequency = clientSync.FFTCenterFrequency
 
 	if f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ {
 		f.MinimumTunableFrequency = clientSync.MinimumFFTCenterFrequency
@@ -475,7 +499,7 @@ func (f *Spyserver) Connect() {
 	}
 
 	log.Println("Trying to connect")
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", f.hostname, f.port))
+	conn, err := net.Dial("tcp", f.fullhostname)
 	if err != nil {
 		panic(err)
 	}
@@ -539,11 +563,25 @@ func (f *Spyserver) SetSampleRate(sampleRate uint32) uint32 {
 		if f.availableSampleRates[i] == sampleRate {
 			f.channelDecimationStageCount = i
 			f.setSetting(settingIqDecimation, []uint32{i})
+			f.currentSampleRate = sampleRate
+			if (f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ) && f.currentDisplaySampleRate == 0 {
+				f.SetDisplaySampleRate(sampleRate)
+			}
 			return sampleRate
 		}
 	}
 
-	return 0xFFFFFFFF
+	return InvalidValue
+}
+func (f *Spyserver) SetDecimationStage(decimation uint32) uint32 {
+	if decimation > f.deviceInfo.DecimationStageCount {
+		return InvalidValue
+	}
+	f.channelDecimationStageCount = decimation
+	f.setSetting(settingFFTDecimation, []uint32{decimation})
+	f.currentSampleRate = f.availableSampleRates[decimation];
+
+	return decimation
 }
 func (f *Spyserver) GetCenterFrequency() uint32 {
 	return f.channelCenterFrequency
@@ -552,26 +590,40 @@ func (f *Spyserver) SetCenterFrequency(centerFrequency uint32) uint32 {
 	if f.channelCenterFrequency != centerFrequency {
 		f.setSetting(settingIqFrequency, []uint32{centerFrequency})
 		f.channelCenterFrequency = centerFrequency
+		if (f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ) && f.DisplayCenterFrequency == 0 {
+			f.SetDisplayCenterFrequency(centerFrequency)
+		}
 	}
 
 	return f.channelCenterFrequency
 }
-func (f *Spyserver) SetDisplayOffset(offset uint32) {
+func (f *Spyserver) GetDisplayCenterFrequency() uint32 {
+	return f.DisplayCenterFrequency
+}
+func (f *Spyserver) SetDisplayCenterFrequency(centerFrequency uint32) uint32 {
+	if f.DisplayCenterFrequency != centerFrequency {
+		f.setSetting(settingFFTFrequency, []uint32{centerFrequency})
+		f.DisplayCenterFrequency = centerFrequency
+	}
+
+	return f.DisplayCenterFrequency
+}
+func (f *Spyserver) SetDisplayOffset(offset int32) {
 	if f.displayOffset != offset {
 		f.displayOffset = offset
-		f.setSetting(settingFFTDbOffset, []uint32{offset})
+		f.setSetting(settingFFTDbOffset, []uint32{uint32(offset)})
 	}
 }
-func (f *Spyserver) GetDisplayOffset() uint32 {
+func (f *Spyserver) GetDisplayOffset() int32 {
 	return f.displayOffset
 }
-func (f *Spyserver) SetDisplayRange(dispRange uint32) {
+func (f *Spyserver) SetDisplayRange(dispRange int32) {
 	if f.displayRange != dispRange {
 		f.displayRange = dispRange
-		f.setSetting(settingFFTDbRange, []uint32{dispRange})
+		f.setSetting(settingFFTDbRange, []uint32{uint32(dispRange)})
 	}
 }
-func (f *Spyserver) GetDisplayRange() uint32 {
+func (f *Spyserver) GetDisplayRange() int32 {
 	return f.displayRange
 }
 func (f *Spyserver) SetDisplayPixels(pixels uint32) {
@@ -587,6 +639,13 @@ func (f *Spyserver) SetStreamingMode(streamMode uint32) {
 	if f.streamingMode != streamMode {
 		f.streamingMode = streamMode
 		f.setSetting(settingStreamingMode, []uint32 {streamMode})
+
+		if (f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ) && f.DisplayCenterFrequency == 0 {
+			f.SetDisplayCenterFrequency(f.GetCenterFrequency())
+		}
+		if f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ {
+			f.setSetting(settingFFTDecimation, []uint32 { f.displayDecimationStageCount });
+		}
 	}
 }
 func (f *Spyserver) GetStreamingMode() uint32 {
@@ -599,4 +658,45 @@ func (f *Spyserver) SetCallback(cb *CallbackBase) {
 func (f *Spyserver) GetAvailableSampleRates() []uint32 {
 	return f.availableSampleRates
 }
+func (f *Spyserver) SetDisplaySampleRate(sampleRate uint32) uint32 {
+	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
+		if f.availableSampleRates[i] == sampleRate {
+			f.displayDecimationStageCount = i
+			f.setSetting(settingFFTDecimation, []uint32{i})
+			f.currentDisplaySampleRate = sampleRate
+			return sampleRate
+		}
+	}
+
+	return InvalidValue
+}
+func (f *Spyserver) SetDisplayDecimationStage(decimation uint32) uint32 {
+	if decimation > f.deviceInfo.DecimationStageCount {
+		return InvalidValue
+	}
+	f.displayDecimationStageCount = decimation
+	f.setSetting(settingFFTDecimation, []uint32{decimation})
+	f.currentDisplaySampleRate = f.availableSampleRates[decimation];
+
+	return decimation
+}
+func (f *Spyserver) GetDisplaySampleRate() uint32 {
+	return f.currentDisplaySampleRate
+}
+func (f *Spyserver) GetDisplayBandwidth() uint32 {
+	return uint32(float32(f.currentDisplaySampleRate) * 0.8)
+}
+func (f *Spyserver) SetGain(gain uint32) uint32 {
+	if gain > f.deviceInfo.GainStageCount {
+		return InvalidValue
+	}
+	f.setSetting(settingGain, []uint32{gain})
+	f.gain = gain
+
+	return gain
+}
+func (f *Spyserver) GetGain() uint32 {
+	return f.gain
+}
+
 // endregion
