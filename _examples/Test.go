@@ -46,10 +46,10 @@ func main() {
 	for i := 0; i < len(srs); i++ {
 		log.Println(fmt.Sprintf("		%f msps", float32(srs[i]) / 1e6))
 	}
-	if spyserver.SetSampleRate(6000000) == 0xFFFFFFFF {
+	if spyserver.SetSampleRate(6000000) == spy2go.InvalidValue {
 		log.Println("Error setting sample rate.")
 	}
-	if spyserver.SetCenterFrequency(106300000) == 0xFFFFFFFF {
+	if spyserver.SetCenterFrequency(106300000) == spy2go.InvalidValue {
 		log.Println("Error setting center frequency.")
 	}
 

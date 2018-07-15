@@ -16,6 +16,8 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
+// Spyserver connection handler.
+// Use MakeSpyserver or MakeSpyserverFullHS to create an instance.
 type Spyserver struct {
 
 	fullhostname string
@@ -63,8 +65,10 @@ type Spyserver struct {
 	msgChannel chan []uint8
 }
 
+// MakeSpyserverByFullHS creates an instance of Spyserver by giving hostname + port.
+// Example: MakeSpyserverByFullHS("airspy.com:5555")
 func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
-	return &Spyserver{
+	var s = &Spyserver{
 		fullhostname: fullhostname,
 		callback: nil,
 		terminated: false,
@@ -83,10 +87,14 @@ func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
 		streamingMode: StreamModeIQOnly,
 		displayDecimationStageCount: 1,
 	}
+	s.cleanup()
+	return s
 }
 
+// MakeSpyserver creates an instance of Spyserver by giving hostname and port as separated parameters.
+// Example: MakeSpyserver("airspy.com", 5555)
 func MakeSpyserver(hostname string, port int) *Spyserver {
-	return &Spyserver{
+	var s = &Spyserver{
 		fullhostname: fmt.Sprintf("%s:%d", hostname, port),
 		callback: nil,
 		terminated: false,
@@ -105,9 +113,13 @@ func MakeSpyserver(hostname string, port int) *Spyserver {
 		streamingMode: StreamModeIQOnly,
 		displayDecimationStageCount: 1,
 	}
+	s.cleanup()
+	return s
 }
 
 // region Private Methods
+
+// sayHello sends a Hello Command to the server, with the Software ID (in this case, spy2go)
 func (f *Spyserver) sayHello() bool {
 	var totalLength = 4
 	var softwareVersionBytes = []byte(SoftwareID)
@@ -122,6 +134,8 @@ func (f *Spyserver) sayHello() bool {
 
 	return f.sendCommand(cmdHello, argBytes)
 }
+
+// cleanup Cleans up all variables and returns to its default states.
 func (f *Spyserver) cleanup() {
 	f.deviceInfo.DeviceType = DeviceInvalid
 	f.deviceInfo.DeviceSerial = 0
@@ -147,6 +161,9 @@ func (f *Spyserver) cleanup() {
 	f.Streaming = false
 	f.terminated = true
 }
+
+// onConnect is executed just after a connection is made with spyserver and got a synchronization info.
+// It updates all settings on spyserver
 func (f *Spyserver) onConnect() {
 	f.setSetting(settingStreamingMode, []uint32 { f.streamingMode })
 	f.setSetting(settingIqFormat, []uint32 { StreamFormatInt16 })
@@ -154,7 +171,7 @@ func (f *Spyserver) onConnect() {
 	f.setSetting(settingFFTDisplayPixels, []uint32 { f.displayPixels })
 	f.setSetting(settingFFTDbOffset, []uint32 { uint32(f.displayOffset - 50) })
 	f.setSetting(settingFFTDbRange, []uint32 { uint32(f.displayRange) })
-	f.setSetting(settingFFTDecimation, []uint32 { 1 });
+	f.setSetting(settingFFTDecimation, []uint32 { 1 })
 
 	var sampleRates = make([]uint32, f.deviceInfo.DecimationStageCount)
 	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
@@ -163,6 +180,8 @@ func (f *Spyserver) onConnect() {
 	}
 	f.availableSampleRates = sampleRates
 }
+
+// setSetting changes a setting in Spyserver
 func (f *Spyserver) setSetting(settingType uint32, params []uint32) bool {
 	var argBytes = make([]uint8, 0)
 
@@ -177,6 +196,9 @@ func (f *Spyserver) setSetting(settingType uint32, params []uint32) bool {
 
 	return f.sendCommand(cmdSetSetting, argBytes)
 }
+
+
+// sendCommand sends a command to spyserver
 func (f *Spyserver) sendCommand(cmd uint32, args []uint8) bool {
 	if f.client == nil {
 		return false
@@ -213,6 +235,7 @@ func (f *Spyserver) sendCommand(cmd uint32, args []uint8) bool {
 
 	return true
 }
+
 func (f *Spyserver) parseMessage(buffer []uint8) {
 	f.downStreamBytes++
 
@@ -261,6 +284,7 @@ func (f *Spyserver) parseMessage(buffer []uint8) {
 		}
 	}
 }
+
 func (f *Spyserver) parseHeader(buffer []uint8) uint32 {
 	consumed := uint32(0)
 
@@ -291,6 +315,7 @@ func (f *Spyserver) parseHeader(buffer []uint8) uint32 {
 
 	return consumed
 }
+
 func (f *Spyserver) parseBody(buffer []uint8) uint32 {
 	consumed := uint32(0)
 
@@ -312,6 +337,7 @@ func (f *Spyserver) parseBody(buffer []uint8) uint32 {
 
 	return consumed
 }
+
 func (f *Spyserver) processDeviceInfo() {
 	var dInfo = DeviceInfo{}
 
@@ -324,6 +350,7 @@ func (f *Spyserver) processDeviceInfo() {
 	f.deviceInfo = dInfo
 	f.gotDeviceInfo = true
 }
+
 func (f *Spyserver) processClientSync() {
 	var clientSync = clientSync{}
 
@@ -353,6 +380,7 @@ func (f *Spyserver) processClientSync() {
 		(*f.callback).OnDeviceSync()
 	}
 }
+
 func (f *Spyserver) processUInt8Samples() {
 	var sampleCount = f.header.BodySize / 2
 
@@ -365,14 +393,15 @@ func (f *Spyserver) processUInt8Samples() {
 
 		for i := uint32(0); i < sampleCount; i++ {
 			u8arr[i] = ComplexUInt8{
-				real: tmp[i*2],
-				imag: tmp[i*2+1],
+				Real: tmp[i*2],
+				Imag: tmp[i*2+1],
 			}
 		}
 
 		(*f.callback).OnUInt8IQ(u8arr)
 	}
 }
+
 func (f *Spyserver) processInt16Samples() {
 	var sampleCount = f.header.BodySize / 4
 
@@ -385,14 +414,15 @@ func (f *Spyserver) processInt16Samples() {
 
 		for i := uint32(0); i < sampleCount; i++ {
 			c16arr[i] = ComplexInt16{
-				real: tmp[i*2],
-				imag: tmp[i*2+1],
+				Real: tmp[i*2],
+				Imag: tmp[i*2+1],
 			}
 		}
 
 		(*f.callback).OnInt16IQ(c16arr)
 	}
 }
+
 func (f *Spyserver) processFloatSamples() {
 	var sampleCount = f.header.BodySize / 8
 
@@ -407,11 +437,13 @@ func (f *Spyserver) processFloatSamples() {
 		(*f.callback).OnFloatIQ(c64arr)
 	}
 }
+
 func (f *Spyserver) processUInt8FFT() {
 	if f.callback != nil && f.callback.OnFFT != nil {
 		(*f.callback).OnFFT(f.bodyBuffer)
 	}
 }
+
 func (f * Spyserver) handleNewMessage() {
 	if f.terminated {
 		return
@@ -438,6 +470,7 @@ func (f * Spyserver) handleNewMessage() {
 		break
 	}
 }
+
 func (f *Spyserver) setStreamState() bool {
 	if f.Streaming {
 		return f.setSetting(settingStreamingEnabled, []uint32{1})
@@ -445,6 +478,7 @@ func (f *Spyserver) setStreamState() bool {
 		return f.setSetting(settingStreamingEnabled, []uint32{0})
 	}
 }
+
 func (f *Spyserver) threadLoop() {
 	f.parserPhase = parserAcquiringHeader
 	f.parserPosition = 0
@@ -475,9 +509,13 @@ func (f *Spyserver) threadLoop() {
 }
 // endregion
 // region Public Methods
+
+// GetName returns the name of the active device in spyserver
 func (f *Spyserver) GetName() string {
 	return DeviceName[f.deviceInfo.DeviceType]
 }
+
+// Start starts the streaming process (if not already started)
 func (f *Spyserver) Start() {
 	if ! f.Streaming {
 		log.Println("Starting streaming")
@@ -486,6 +524,8 @@ func (f *Spyserver) Start() {
 		f.setStreamState()
 	}
 }
+
+// Stop stop the streaming process (if started)
 func (f *Spyserver) Stop() {
 	if f.Streaming {
 		f.Streaming = false
@@ -493,6 +533,9 @@ func (f *Spyserver) Stop() {
 		f.setStreamState()
 	}
 }
+
+// Connect initiates the connection with spyserver.
+// It panics if the connection fails for some reason.
 func (f *Spyserver) Connect() {
 	if f.routineRunning {
 		return
@@ -544,6 +587,8 @@ func (f *Spyserver) Connect() {
 
 	panic("Server didn't send the device capability and synchronization info.")
 }
+
+// Disconnect disconnects from current connected spyserver.
 func (f * Spyserver) Disconnect() {
 	log.Println("Disconnecting")
 	f.terminated = true
@@ -555,9 +600,15 @@ func (f * Spyserver) Disconnect() {
 
 	f.cleanup()
 }
+
+// GetSampleRate returns the sample rate of the IQ channel in Hertz
 func (f *Spyserver) GetSampleRate() uint32 {
 	return f.currentSampleRate
 }
+
+// SetSampleRate sets the sample rate of the IQ Channel in Hertz
+// Check the available sample rates using GetAvailableSampleRates
+// Returns InvalidValue in case of a invalid value in the input
 func (f *Spyserver) SetSampleRate(sampleRate uint32) uint32 {
 	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
 		if f.availableSampleRates[i] == sampleRate {
@@ -573,19 +624,28 @@ func (f *Spyserver) SetSampleRate(sampleRate uint32) uint32 {
 
 	return InvalidValue
 }
+
+// SetDecimationStage sets the sample rate by using the number of decimation stages.
+// Each decimation stage decimates by two, then the total decimation will be defined by 2^stages.
+// This is the same as SetSampleRate, but SetSampleRate instead, looks at a pre-filled table of all 2^stages
+// decimations that the server supports and applies into the original device sample rate.
 func (f *Spyserver) SetDecimationStage(decimation uint32) uint32 {
 	if decimation > f.deviceInfo.DecimationStageCount {
 		return InvalidValue
 	}
 	f.channelDecimationStageCount = decimation
 	f.setSetting(settingFFTDecimation, []uint32{decimation})
-	f.currentSampleRate = f.availableSampleRates[decimation];
+	f.currentSampleRate = f.availableSampleRates[decimation]
 
 	return decimation
 }
+
+// GetCenterFrequency returns the IQ Channel Center Frequency in Hz
 func (f *Spyserver) GetCenterFrequency() uint32 {
 	return f.channelCenterFrequency
 }
+
+// SetCenterFrequency sets the IQ Channel Center Frequency in Hertz and returns it.
 func (f *Spyserver) SetCenterFrequency(centerFrequency uint32) uint32 {
 	if f.channelCenterFrequency != centerFrequency {
 		f.setSetting(settingIqFrequency, []uint32{centerFrequency})
@@ -597,9 +657,13 @@ func (f *Spyserver) SetCenterFrequency(centerFrequency uint32) uint32 {
 
 	return f.channelCenterFrequency
 }
+
+// GetDisplayCenterFrequency returns the FFT Display Center Frequency in Hertz
 func (f *Spyserver) GetDisplayCenterFrequency() uint32 {
 	return f.DisplayCenterFrequency
 }
+
+// SetDisplayCenterFrequency sets the FFT Channel Center Frequency in Hertz and returns it.
 func (f *Spyserver) SetDisplayCenterFrequency(centerFrequency uint32) uint32 {
 	if f.DisplayCenterFrequency != centerFrequency {
 		f.setSetting(settingFFTFrequency, []uint32{centerFrequency})
@@ -608,33 +672,48 @@ func (f *Spyserver) SetDisplayCenterFrequency(centerFrequency uint32) uint32 {
 
 	return f.DisplayCenterFrequency
 }
+
+// SetDisplayOffset sets the FFT Display offset in dB
 func (f *Spyserver) SetDisplayOffset(offset int32) {
 	if f.displayOffset != offset {
 		f.displayOffset = offset
 		f.setSetting(settingFFTDbOffset, []uint32{uint32(offset)})
 	}
 }
+
+// GetDisplayOffset returns the FFT Display offset in dB
 func (f *Spyserver) GetDisplayOffset() int32 {
 	return f.displayOffset
 }
+
+// SetDisplayRange sets the FFT Display range in dB
 func (f *Spyserver) SetDisplayRange(dispRange int32) {
 	if f.displayRange != dispRange {
 		f.displayRange = dispRange
 		f.setSetting(settingFFTDbRange, []uint32{uint32(dispRange)})
 	}
 }
+
+// GetDisplayRange returns the FFT Display range in dB
 func (f *Spyserver) GetDisplayRange() int32 {
 	return f.displayRange
 }
+
+// SetDisplayPixels sets the FFT Display width in pixels
 func (f *Spyserver) SetDisplayPixels(pixels uint32) {
 	if f.displayPixels != pixels {
 		f.displayPixels = pixels
 		f.setSetting(settingFFTDisplayPixels, []uint32{pixels})
 	}
 }
+
+// GetDisplayPixels returns the FFT Display width in pixels
 func (f *Spyserver) GetDisplayPixels() uint32 {
 	return f.displayPixels
 }
+
+// SetStreamingMode sets the streaming mode of the server.
+// The valid values are StreamModeIQOnly, StreamModeFFTOnly, StreamModeFFTIQ
 func (f *Spyserver) SetStreamingMode(streamMode uint32) {
 	if f.streamingMode != streamMode {
 		f.streamingMode = streamMode
@@ -644,20 +723,29 @@ func (f *Spyserver) SetStreamingMode(streamMode uint32) {
 			f.SetDisplayCenterFrequency(f.GetCenterFrequency())
 		}
 		if f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ {
-			f.setSetting(settingFFTDecimation, []uint32 { f.displayDecimationStageCount });
+			f.setSetting(settingFFTDecimation, []uint32 { f.displayDecimationStageCount })
 		}
 	}
 }
+
+// GetStreamingMode returns the streaming mode of the server.
 func (f *Spyserver) GetStreamingMode() uint32 {
 	return f.streamingMode
 }
 
+// SetCallback sets the callbacks for server data
 func (f *Spyserver) SetCallback(cb *CallbackBase) {
 	f.callback = cb
 }
+
+// GetAvailableSampleRates returns a list of available sample rates for the current connection.
 func (f *Spyserver) GetAvailableSampleRates() []uint32 {
 	return f.availableSampleRates
 }
+
+// SetDisplaySampleRate sets the sample rate of the FFT Channel in Hertz
+// Check the available sample rates using GetAvailableSampleRates
+// Returns InvalidValue in case of a invalid value in the input
 func (f *Spyserver) SetDisplaySampleRate(sampleRate uint32) uint32 {
 	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
 		if f.availableSampleRates[i] == sampleRate {
@@ -670,22 +758,37 @@ func (f *Spyserver) SetDisplaySampleRate(sampleRate uint32) uint32 {
 
 	return InvalidValue
 }
+
+// SetDisplayDecimationStage sets the sample rate of the FFT Channel by using the number of decimation stages.
+// Each decimation stage decimates by two, then the total decimation will be defined by 2^stages.
+// This is the same as SetSampleRate, but SetSampleRate instead, looks at a pre-filled table of all 2^stages
+// decimations that the server supports and applies into the original device sample rate.
+// Returns InvalidValue in case of a invalid value in the input
 func (f *Spyserver) SetDisplayDecimationStage(decimation uint32) uint32 {
 	if decimation > f.deviceInfo.DecimationStageCount {
 		return InvalidValue
 	}
 	f.displayDecimationStageCount = decimation
 	f.setSetting(settingFFTDecimation, []uint32{decimation})
-	f.currentDisplaySampleRate = f.availableSampleRates[decimation];
+	f.currentDisplaySampleRate = f.availableSampleRates[decimation]
 
 	return decimation
 }
+
+// GetDisplaySampleRate returns the sample rate of FFT Channel in Hertz
 func (f *Spyserver) GetDisplaySampleRate() uint32 {
 	return f.currentDisplaySampleRate
 }
+
+// GetDisplayBandwidth returns the effective bandwidth of the FFT Channel in Hertz.
+// For calculating the frequency of each FFT Pixel Column, you should use this as total FFT Bandwidth.
 func (f *Spyserver) GetDisplayBandwidth() uint32 {
 	return uint32(float32(f.currentDisplaySampleRate) * 0.8)
 }
+
+// SetGain sets the gain stage of the server.
+// The actual gain in dB varies from device to device.
+// Returns InvalidValue in case of a invalid value in the input
 func (f *Spyserver) SetGain(gain uint32) uint32 {
 	if gain > f.deviceInfo.GainStageCount {
 		return InvalidValue
@@ -695,6 +798,7 @@ func (f *Spyserver) SetGain(gain uint32) uint32 {
 
 	return gain
 }
+// GetGain returns the current gain stage of the server.
 func (f *Spyserver) GetGain() uint32 {
 	return f.gain
 }
