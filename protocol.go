@@ -33,6 +33,7 @@ const defaultDisplayPixels = 2000
 // InvalidValue is a constant that is returned in any of the functions that can receive invalid values.
 const InvalidValue = 0xFFFFFFFF
 
+// DeviceIds IDs of the devices in spyserver
 const (
 	DeviceInvalid   = 0
 	DeviceAirspyOne = 1
@@ -40,6 +41,7 @@ const (
 	DeviceRtlsdr    = 3
 )
 
+// DeviceNames names of the devices
 const (
 	DeviceInvalidName = "Invalid Device"
 	DeviceAirspyOneName = "Airspy Mini / R2"
@@ -79,16 +81,21 @@ const (
 	settingFFTDisplayPixels = 205
 )
 
+// StreamTypes is a enum that defines which stream types the spyserver supports.
 const (
 	//StreamTypeStatus = 0
+
 	StreamTypeIQ     = 1
+
 	//StreamTypeAF     = 2
+
 	StreamTypeFFT    = 4
 )
 
 const (
 	// StreamModeIQOnly only enables IQ Channel
 	StreamModeIQOnly  = StreamTypeIQ
+
 	//StreamModeAFOnly  = StreamTypeAF
 
 	// StreamModeFFTOnly only enables FFT Channel
@@ -96,15 +103,20 @@ const (
 
 	// StreamModeFFTOnly only enables both IQ and FFT Channels
 	StreamModeFFTIQ   = StreamTypeFFT | StreamTypeIQ
+
 	//StreamModeFFTAF   = StreamTypeFFT | StreamTypeAF
 )
 
 const (
 	//StreamFormatDint4      = 0
+
 	StreamFormatUint8      = 1
 	StreamFormatInt16      = 2
+
 	//StreamFormatInt24      = 3
+
 	StreamFormatFloat      = 4
+
 	//StreamFormatCompressed = 5
 )
 
@@ -116,8 +128,11 @@ const (
 
 	msgTypeUint8IQ      = 100
 	msgTypeInt16IQ      = 101
+
 	//msgTypeInt24IQ      = 102
+
 	msgTypeFloatIQ      = 103
+
 	//msgTypeCompressedIQ = 104
 
 	//msgTypeUint8AF      = 200
@@ -127,7 +142,9 @@ const (
 	//msgTypeCompressedAF = 204
 
 	//msgTypeDint4FFT      = 300
+
 	msgTypeUint8FFT      = 301
+
 	//msgTypeCompressedFFT = 302
 )
 
