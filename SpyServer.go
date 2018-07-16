@@ -1,3 +1,5 @@
+// spy2go is a Spyserver Go Client that supports receiving custom IQ and FFT data
+// It is currently Work in Progress but it already works.
 package spy2go
 
 import (
@@ -33,15 +35,15 @@ type Spyserver struct {
 
 	availableSampleRates []uint32
 
-	parserPhase uint32
-	deviceInfo DeviceInfo
-	header messageHeader
+	parserPhase        uint32
+	deviceInfo         deviceInfo
+	header             messageHeader
 	lastSequenceNumber uint32
-	droppedBuffers uint32
-	downStreamBytes uint64
-	parserPosition uint32
-	bodyBuffer []uint8
-	headerBuffer []uint8
+	droppedBuffers     uint32
+	downStreamBytes    uint64
+	parserPosition     uint32
+	bodyBuffer         []uint8
+	headerBuffer       []uint8
 
 	Streaming bool
 	CanControl bool
@@ -81,10 +83,10 @@ func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
 		availableSampleRates: []uint32{},
 		headerBuffer: make([]uint8, messageHeaderSize),
 
-		displayOffset: 0,
-		displayRange: DefaultFFTRange,
-		displayPixels: DefaultDisplayPixels,
-		streamingMode: StreamModeIQOnly,
+		displayOffset:               0,
+		displayRange:                defaultFFTRange,
+		displayPixels:               defaultDisplayPixels,
+		streamingMode:               StreamModeIQOnly,
 		displayDecimationStageCount: 1,
 	}
 	s.cleanup()
@@ -107,10 +109,10 @@ func MakeSpyserver(hostname string, port int) *Spyserver {
 		availableSampleRates: []uint32{},
 		headerBuffer: make([]uint8, messageHeaderSize),
 
-		displayOffset: 0,
-		displayRange: DefaultFFTRange,
-		displayPixels: DefaultDisplayPixels,
-		streamingMode: StreamModeIQOnly,
+		displayOffset:               0,
+		displayRange:                defaultFFTRange,
+		displayPixels:               defaultDisplayPixels,
+		streamingMode:               StreamModeIQOnly,
 		displayDecimationStageCount: 1,
 	}
 	s.cleanup()
@@ -258,7 +260,7 @@ func (f *Spyserver) parseMessage(buffer []uint8) {
 					panic("Server is running an unsupported protocol version.")
 				}
 
-				if f.header.BodySize > SpyserverMaxMessageBodySize {
+				if f.header.BodySize > spyserverMaxMessageBodySize {
 					panic("Server sent more than expected body size.")
 				}
 
@@ -339,7 +341,7 @@ func (f *Spyserver) parseBody(buffer []uint8) uint32 {
 }
 
 func (f *Spyserver) processDeviceInfo() {
-	var dInfo = DeviceInfo{}
+	var dInfo = deviceInfo{}
 
 	buf := bytes.NewReader(f.bodyBuffer)
 	err := binary.Read(buf, binary.LittleEndian, &dInfo)

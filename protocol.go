@@ -6,21 +6,31 @@ import "unsafe"
 // You can replace the default value for your own application name.
 var SoftwareID = "Spy2Go 1.0"
 
+// SpyserverProtocolVersion packed into a integer.
+// Defined by ((major) << 24) | ((minor) << 16) | (revision)
 const SpyserverProtocolVersion = ((2) << 24) | ((0) << 16) | (1558)
+
 //const SpyserverMaxCommandBodySize = 256
-const SpyserverMaxMessageBodySize = 1 << 20
+const spyserverMaxMessageBodySize = 1 << 20
+
+// SpyserverMaxDisplayPixels is the max possible pixels for Spyserver FFT width
 const SpyserverMaxDisplayPixels = 1 << 15
+
+// SpyserverMinDisplayPixels is the min possible pixels for Spyserver FFT width
 const SpyserverMinDisplayPixels = 100
+
+// SpyserverMaxFFTDBRange is the maximum dB Value for FFT Range
 const SpyserverMaxFFTDBRange = 150
+
+// SpyserverMinFFTDBRange is the minimum dB Value for FFT Range
 const SpyserverMinFFTDBRange = 10
+
 const SpyserverMaxFFTDBOffset = 100
 
-const SpyserverMinGain = 0
-const SpyserverMaxGain = 16
+const defaultFFTRange = 127
+const defaultDisplayPixels = 2000
 
-const DefaultFFTRange = 127
-const DefaultDisplayPixels = 2000
-
+// InvalidValue is a constant that is returned in any of the functions that can receive invalid values.
 const InvalidValue = 0xFFFFFFFF
 
 const (
@@ -37,6 +47,7 @@ const (
 	DeviceRtlsdrName = "RTLSDR"
 )
 
+// DeviceName list of device names by their ids
 var DeviceName = map[uint32]string {
 	DeviceInvalid: DeviceInvalidName,
 	DeviceAirspyOne: DeviceAirspyOneName,
@@ -69,9 +80,9 @@ const (
 )
 
 const (
-	StreamTypeStatus = 0
+	//StreamTypeStatus = 0
 	StreamTypeIQ     = 1
-	StreamTypeAF     = 2
+	//StreamTypeAF     = 2
 	StreamTypeFFT    = 4
 )
 
@@ -150,7 +161,7 @@ type messageHeader struct {
 
 const messageHeaderSize = uint32(unsafe.Sizeof(messageHeader{}))
 
-type DeviceInfo struct {
+type deviceInfo struct {
 	DeviceType uint32
 	DeviceSerial uint32
 	MaximumSampleRate uint32
