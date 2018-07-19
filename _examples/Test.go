@@ -5,14 +5,22 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"os"
+	"bytes"
+	"encoding/binary"
 )
 
+var f *os.File
 
 func OnFloatIQ(data []complex64) {
 	log.Println("Received Complex 64 Data! ", len(data))
 }
 func OnInt16IQ(data []spy2go.ComplexInt16) {
-	log.Println("Received Complex 16 Data! ", len(data))
+	//log.Println("Received Complex 16 Data! ", len(data))
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, data)
+
+	f.Write(buf.Bytes())
 }
 func OnUint8IQ(data []spy2go.ComplexUInt8) {
 	log.Println("Received Complex 8 Data! ", len(data))
@@ -35,6 +43,10 @@ func main() {
 		OnFFT: OnFFT,
 	}
 
+	if f == nil {
+		f, _ = os.Create("iq.raw")
+	}
+
 	spyserver.SetCallback(&cb)
 
 	spyserver.Connect()
@@ -46,14 +58,14 @@ func main() {
 	for i := 0; i < len(srs); i++ {
 		log.Println(fmt.Sprintf("		%f msps", float32(srs[i]) / 1e6))
 	}
-	if spyserver.SetSampleRate(6000000) == spy2go.InvalidValue {
+	if spyserver.SetSampleRate(750000) == spy2go.InvalidValue {
 		log.Println("Error setting sample rate.")
 	}
 	if spyserver.SetCenterFrequency(106300000) == spy2go.InvalidValue {
 		log.Println("Error setting center frequency.")
 	}
 
-	spyserver.SetStreamingMode(spy2go.StreamModeFFTIQ)
+	spyserver.SetStreamingMode(spy2go.StreamModeIQOnly)
 
 	log.Println("Starting")
 	spyserver.Start()
@@ -64,4 +76,5 @@ func main() {
 	spyserver.Stop()
 
 	spyserver.Disconnect()
+	f.Sync()
 }

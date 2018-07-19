@@ -21,17 +21,16 @@ func min(a, b uint32) uint32 {
 // Spyserver connection handler.
 // Use MakeSpyserver or MakeSpyserverFullHS to create an instance.
 type Spyserver struct {
-
 	fullhostname string
-	callback *CallbackBase
-	client net.Conn
+	callback     *CallbackBase
+	client       net.Conn
 
-	terminated bool
+	terminated     bool
 	routineRunning bool
-	gotDeviceInfo bool
-	gotSyncInfo bool
-	streamingMode uint32
-	gain uint32
+	gotDeviceInfo  bool
+	gotSyncInfo    bool
+	streamingMode  uint32
+	gain           uint32
 
 	availableSampleRates []uint32
 
@@ -45,9 +44,9 @@ type Spyserver struct {
 	bodyBuffer         []uint8
 	headerBuffer       []uint8
 
-	Streaming bool
-	CanControl bool
-	IsConnected bool
+	Streaming      bool
+	CanControl     bool
+	IsConnected    bool
 	DroppedBuffers uint32
 
 	MinimumTunableFrequency uint32
@@ -71,17 +70,17 @@ type Spyserver struct {
 // Example: MakeSpyserverByFullHS("airspy.com:5555")
 func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
 	var s = &Spyserver{
-		fullhostname: fullhostname,
-		callback: nil,
-		terminated: false,
-		gotDeviceInfo: false,
-		gotSyncInfo: false,
-		parserPhase: parserAcquiringHeader,
-		Streaming: false,
-		CanControl: false,
-		IsConnected: false,
+		fullhostname:         fullhostname,
+		callback:             nil,
+		terminated:           false,
+		gotDeviceInfo:        false,
+		gotSyncInfo:          false,
+		parserPhase:          parserAcquiringHeader,
+		Streaming:            false,
+		CanControl:           false,
+		IsConnected:          false,
 		availableSampleRates: []uint32{},
-		headerBuffer: make([]uint8, messageHeaderSize),
+		headerBuffer:         make([]uint8, messageHeaderSize),
 
 		displayOffset:               0,
 		displayRange:                defaultFFTRange,
@@ -97,17 +96,17 @@ func MakeSpyserverByFullHS(fullhostname string) *Spyserver {
 // Example: MakeSpyserver("airspy.com", 5555)
 func MakeSpyserver(hostname string, port int) *Spyserver {
 	var s = &Spyserver{
-		fullhostname: fmt.Sprintf("%s:%d", hostname, port),
-		callback: nil,
-		terminated: false,
-		gotDeviceInfo: false,
-		gotSyncInfo: false,
-		parserPhase: parserAcquiringHeader,
-		Streaming: false,
-		CanControl: false,
-		IsConnected: false,
+		fullhostname:         fmt.Sprintf("%s:%d", hostname, port),
+		callback:             nil,
+		terminated:           false,
+		gotDeviceInfo:        false,
+		gotSyncInfo:          false,
+		parserPhase:          parserAcquiringHeader,
+		Streaming:            false,
+		CanControl:           false,
+		IsConnected:          false,
 		availableSampleRates: []uint32{},
-		headerBuffer: make([]uint8, messageHeaderSize),
+		headerBuffer:         make([]uint8, messageHeaderSize),
 
 		displayOffset:               0,
 		displayRange:                defaultFFTRange,
@@ -127,14 +126,11 @@ func (f *Spyserver) sayHello() bool {
 	var softwareVersionBytes = []byte(SoftwareID)
 	totalLength += len(softwareVersionBytes)
 
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint32(SpyserverProtocolVersion))
+	binary.Write(buf, binary.LittleEndian, softwareVersionBytes)
 
-	var argBytes = make([]uint8, totalLength)
-	binary.LittleEndian.PutUint32(argBytes[0:], SpyserverProtocolVersion)
-	for i := 4; i < totalLength; i++ {
-		argBytes[i] = softwareVersionBytes[i-4]
-	}
-
-	return f.sendCommand(cmdHello, argBytes)
+	return f.sendCommand(cmdHello, buf.Bytes())
 }
 
 // cleanup Cleans up all variables and returns to its default states.
@@ -167,13 +163,13 @@ func (f *Spyserver) cleanup() {
 // onConnect is executed just after a connection is made with spyserver and got a synchronization info.
 // It updates all settings on spyserver
 func (f *Spyserver) onConnect() {
-	f.setSetting(settingStreamingMode, []uint32 { f.streamingMode })
-	f.setSetting(settingIqFormat, []uint32 { StreamFormatInt16 })
-	f.setSetting(settingFFTFormat, []uint32 { StreamFormatUint8 })
-	f.setSetting(settingFFTDisplayPixels, []uint32 { f.displayPixels })
-	f.setSetting(settingFFTDbOffset, []uint32 { uint32(f.displayOffset - 50) })
-	f.setSetting(settingFFTDbRange, []uint32 { uint32(f.displayRange) })
-	f.setSetting(settingFFTDecimation, []uint32 { 1 })
+	f.setSetting(settingStreamingMode, []uint32{f.streamingMode})
+	f.setSetting(settingIqFormat, []uint32{StreamFormatInt16})
+	f.setSetting(settingFFTFormat, []uint32{StreamFormatUint8})
+	f.setSetting(settingFFTDisplayPixels, []uint32{f.displayPixels})
+	f.setSetting(settingFFTDbOffset, []uint32{uint32(f.displayOffset - 50)})
+	f.setSetting(settingFFTDbRange, []uint32{uint32(f.displayRange)})
+	f.setSetting(settingFFTDecimation, []uint32{1})
 
 	var sampleRates = make([]uint32, f.deviceInfo.DecimationStageCount)
 	for i := uint32(0); i < f.deviceInfo.DecimationStageCount; i++ {
@@ -199,7 +195,6 @@ func (f *Spyserver) setSetting(settingType uint32, params []uint32) bool {
 	return f.sendCommand(cmdSetSetting, argBytes)
 }
 
-
 // sendCommand sends a command to spyserver
 func (f *Spyserver) sendCommand(cmd uint32, args []uint8) bool {
 	if f.client == nil {
@@ -215,7 +210,7 @@ func (f *Spyserver) sendCommand(cmd uint32, args []uint8) bool {
 
 	var header = commandHeader{
 		CommandType: cmd,
-		BodySize: argsLen,
+		BodySize:    argsLen,
 	}
 
 	err := binary.Write(buff, binary.LittleEndian, &header)
@@ -255,6 +250,7 @@ func (f *Spyserver) parseMessage(buffer []uint8) {
 
 				serverMajor := uint8((f.header.ProtocolID >> 24) & 0xFF)
 				serverMinor := uint8((f.header.ProtocolID >> 16) & 0xFF)
+				//serverBuild := uint16(f.header.ProtocolID & 0xFFFF)
 
 				if clientMajor != serverMajor || clientMinor != serverMinor {
 					panic("Server is running an unsupported protocol version.")
@@ -291,9 +287,9 @@ func (f *Spyserver) parseHeader(buffer []uint8) uint32 {
 	consumed := uint32(0)
 
 	for len(buffer) > 0 {
-		toWrite := min(messageHeaderSize - f.parserPosition, uint32(len(buffer)))
-		for i := f.parserPosition; i < toWrite; i++ {
-			f.headerBuffer[i] = buffer[i-f.parserPosition]
+		toWrite := min(messageHeaderSize-f.parserPosition, uint32(len(buffer)))
+		for i := uint32(0); i < toWrite; i++ {
+			f.headerBuffer[i+f.parserPosition] = buffer[i]
 		}
 		buffer = buffer[toWrite:]
 		consumed += toWrite
@@ -322,9 +318,9 @@ func (f *Spyserver) parseBody(buffer []uint8) uint32 {
 	consumed := uint32(0)
 
 	for len(buffer) > 0 {
-		toWrite := min(f.header.BodySize - f.parserPosition, uint32(len(buffer)))
-		for i := f.parserPosition; i < toWrite; i++ {
-			f.bodyBuffer[i] = buffer[i-f.parserPosition]
+		toWrite := min(f.header.BodySize-f.parserPosition, uint32(len(buffer)))
+		for i := uint32(0); i < toWrite; i++ {
+			f.bodyBuffer[i+f.parserPosition] = buffer[i]
 		}
 		buffer = buffer[toWrite:]
 		consumed += toWrite
@@ -386,11 +382,11 @@ func (f *Spyserver) processClientSync() {
 func (f *Spyserver) processUInt8Samples() {
 	var sampleCount = f.header.BodySize / 2
 
-	if f.callback != nil  && f.callback.OnUInt8IQ != nil{
+	if f.callback != nil && f.callback.OnUInt8IQ != nil {
 		var u8arr = make([]ComplexUInt8, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
-		var tmp = make([]uint8, sampleCount * 2)
+		var tmp = make([]uint8, sampleCount*2)
 		binary.Read(buf, binary.LittleEndian, &tmp)
 
 		for i := uint32(0); i < sampleCount; i++ {
@@ -406,13 +402,19 @@ func (f *Spyserver) processUInt8Samples() {
 
 func (f *Spyserver) processInt16Samples() {
 	var sampleCount = f.header.BodySize / 4
-
+	//var pairLength = sampleCount * 2
 	if f.callback != nil && f.callback.OnInt16IQ != nil {
-		var c16arr= make([]ComplexInt16, sampleCount)
+		var c16arr = make([]ComplexInt16, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
-		var tmp = make([]int16, sampleCount * 2)
+		var tmp = make([]int16, sampleCount*2)
 		binary.Read(buf, binary.LittleEndian, &tmp)
+
+		//for i := 0; i < int(sampleCount * 2); i++ {
+		//	var z int16
+		//	binary.Read(buf, binary.LittleEndian, &z)
+		//	tmp[i] = z
+		//}
 
 		for i := uint32(0); i < sampleCount; i++ {
 			c16arr[i] = ComplexInt16{
@@ -420,7 +422,6 @@ func (f *Spyserver) processInt16Samples() {
 				Imag: tmp[i*2+1],
 			}
 		}
-
 		(*f.callback).OnInt16IQ(c16arr)
 	}
 }
@@ -429,7 +430,7 @@ func (f *Spyserver) processFloatSamples() {
 	var sampleCount = f.header.BodySize / 8
 
 	if f.callback != nil && f.callback.OnFloatIQ != nil {
-		var c64arr= make([]complex64, sampleCount)
+		var c64arr = make([]complex64, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
 		for i := uint32(0); i < sampleCount; i++ {
@@ -446,7 +447,7 @@ func (f *Spyserver) processUInt8FFT() {
 	}
 }
 
-func (f * Spyserver) handleNewMessage() {
+func (f *Spyserver) handleNewMessage() {
 	if f.terminated {
 		return
 	}
@@ -485,7 +486,7 @@ func (f *Spyserver) threadLoop() {
 	f.parserPhase = parserAcquiringHeader
 	f.parserPosition = 0
 
-	buffer := make([]uint8, 64 * 1024)
+	buffer := make([]uint8, 64*1024)
 
 	for f.routineRunning && !f.terminated {
 		if f.terminated || !f.routineRunning {
@@ -509,6 +510,7 @@ func (f *Spyserver) threadLoop() {
 	f.routineRunning = false
 	f.cleanup()
 }
+
 // endregion
 // region Public Methods
 
@@ -591,7 +593,7 @@ func (f *Spyserver) Connect() {
 }
 
 // Disconnect disconnects from current connected spyserver.
-func (f * Spyserver) Disconnect() {
+func (f *Spyserver) Disconnect() {
 	log.Println("Disconnecting")
 	f.terminated = true
 	if f.IsConnected {
@@ -719,13 +721,13 @@ func (f *Spyserver) GetDisplayPixels() uint32 {
 func (f *Spyserver) SetStreamingMode(streamMode uint32) {
 	if f.streamingMode != streamMode {
 		f.streamingMode = streamMode
-		f.setSetting(settingStreamingMode, []uint32 {streamMode})
+		f.setSetting(settingStreamingMode, []uint32{streamMode})
 
 		if (f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ) && f.DisplayCenterFrequency == 0 {
 			f.SetDisplayCenterFrequency(f.GetCenterFrequency())
 		}
 		if f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ {
-			f.setSetting(settingFFTDecimation, []uint32 { f.displayDecimationStageCount })
+			f.setSetting(settingFFTDecimation, []uint32{f.displayDecimationStageCount})
 		}
 	}
 }
@@ -800,6 +802,7 @@ func (f *Spyserver) SetGain(gain uint32) uint32 {
 
 	return gain
 }
+
 // GetGain returns the current gain stage of the server.
 func (f *Spyserver) GetGain() uint32 {
 	return f.gain
