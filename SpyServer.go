@@ -638,7 +638,7 @@ func (f *Spyserver) SetDecimationStage(decimation uint32) uint32 {
 		return InvalidValue
 	}
 	f.channelDecimationStageCount = decimation
-	f.setSetting(settingFFTDecimation, []uint32{decimation})
+	f.setSetting(settingIqDecimation, []uint32{decimation})
 	f.currentSampleRate = f.availableSampleRates[decimation]
 
 	return decimation
