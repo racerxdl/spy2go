@@ -361,8 +361,8 @@ func (f *Spyserver) processClientSync() {
 	f.CanControl = clientSync.CanControl != 0
 	f.gain = clientSync.Gain
 	f.DeviceCenterFrequency = clientSync.DeviceCenterFrequency
-	f.channelCenterFrequency = clientSync.IQCenterFrequency
-	//f.DisplayCenterFrequency = clientSync.FFTCenterFrequency
+	//f.channelCenterFrequency = clientSync.DeviceCenterFrequency
+	f.DisplayCenterFrequency = clientSync.FFTCenterFrequency
 
 	if f.streamingMode == StreamModeFFTOnly || f.streamingMode == StreamModeFFTIQ {
 		f.MinimumTunableFrequency = clientSync.MinimumFFTCenterFrequency
@@ -373,6 +373,8 @@ func (f *Spyserver) processClientSync() {
 	}
 
 	f.gotSyncInfo = true
+
+	//log.Println(clientSync)
 
 	if f.callback != nil {
 		(*f.callback).OnDeviceSync()
