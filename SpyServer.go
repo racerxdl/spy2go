@@ -582,7 +582,7 @@ func (f *Spyserver) Connect() {
 				return
 			}
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(4 * time.Millisecond)
 	}
 
 	f.Disconnect()
