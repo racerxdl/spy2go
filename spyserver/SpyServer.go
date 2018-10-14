@@ -1,14 +1,15 @@
 // spy2go is a Spyserver Go Client that supports receiving custom IQ and FFT data
 // It is currently Work in Progress but it already works.
-package spy2go
+package spyserver
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"github.com/racerxdl/spy2go/spytypes"
 	"log"
 	"net"
-	"fmt"
 	"time"
-	"encoding/binary"
-	"bytes"
 )
 
 func min(a, b uint32) uint32 {
@@ -22,7 +23,7 @@ func min(a, b uint32) uint32 {
 // Use MakeSpyserver or MakeSpyserverFullHS to create an instance.
 type Spyserver struct {
 	fullhostname string
-	callback     *CallbackBase
+	callback     spytypes.Callback
 	client       net.Conn
 
 	terminated     bool
@@ -377,36 +378,36 @@ func (f *Spyserver) processClientSync() {
 	//log.Println(clientSync)
 
 	if f.callback != nil {
-		(*f.callback).OnDeviceSync()
+		f.callback.OnData(spytypes.DeviceSync, nil)
 	}
 }
 
 func (f *Spyserver) processUInt8Samples() {
 	var sampleCount = f.header.BodySize / 2
 
-	if f.callback != nil && f.callback.OnUInt8IQ != nil {
-		var u8arr = make([]ComplexUInt8, sampleCount)
+	if f.callback != nil {
+		var u8arr = make([]spytypes.ComplexUInt8, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
 		var tmp = make([]uint8, sampleCount*2)
 		binary.Read(buf, binary.LittleEndian, &tmp)
 
 		for i := uint32(0); i < sampleCount; i++ {
-			u8arr[i] = ComplexUInt8{
+			u8arr[i] = spytypes.ComplexUInt8{
 				Real: tmp[i*2],
 				Imag: tmp[i*2+1],
 			}
 		}
 
-		(*f.callback).OnUInt8IQ(u8arr)
+		f.callback.OnData(spytypes.SamplesUInt8, u8arr)
 	}
 }
 
 func (f *Spyserver) processInt16Samples() {
 	var sampleCount = f.header.BodySize / 4
 	//var pairLength = sampleCount * 2
-	if f.callback != nil && f.callback.OnInt16IQ != nil {
-		var c16arr = make([]ComplexInt16, sampleCount)
+	if f.callback != nil {
+		var c16arr = make([]spytypes.ComplexInt16, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
 		var tmp = make([]int16, sampleCount*2)
@@ -419,19 +420,19 @@ func (f *Spyserver) processInt16Samples() {
 		//}
 
 		for i := uint32(0); i < sampleCount; i++ {
-			c16arr[i] = ComplexInt16{
+			c16arr[i] = spytypes.ComplexInt16{
 				Real: tmp[i*2],
 				Imag: tmp[i*2+1],
 			}
 		}
-		(*f.callback).OnInt16IQ(c16arr)
+		f.callback.OnData(spytypes.SamplesComplex32, c16arr)
 	}
 }
 
 func (f *Spyserver) processFloatSamples() {
 	var sampleCount = f.header.BodySize / 8
 
-	if f.callback != nil && f.callback.OnFloatIQ != nil {
+	if f.callback != nil {
 		var c64arr = make([]complex64, sampleCount)
 		buf := bytes.NewBuffer(f.bodyBuffer)
 
@@ -439,13 +440,13 @@ func (f *Spyserver) processFloatSamples() {
 			binary.Read(buf, binary.LittleEndian, &c64arr[i])
 		}
 
-		(*f.callback).OnFloatIQ(c64arr)
+		f.callback.OnData(spytypes.SamplesComplex64, c64arr)
 	}
 }
 
 func (f *Spyserver) processUInt8FFT() {
-	if f.callback != nil && f.callback.OnFFT != nil {
-		(*f.callback).OnFFT(f.bodyBuffer)
+	if f.callback != nil {
+		f.callback.OnData(spytypes.FFTUInt8, f.bodyBuffer)
 	}
 }
 
@@ -523,7 +524,7 @@ func (f *Spyserver) GetName() string {
 
 // Start starts the streaming process (if not already started)
 func (f *Spyserver) Start() {
-	if ! f.Streaming {
+	if !f.Streaming {
 		log.Println("Starting streaming")
 		f.Streaming = true
 		f.downStreamBytes = 0
@@ -569,7 +570,7 @@ func (f *Spyserver) Connect() {
 
 	go f.threadLoop()
 	log.Println("Connected. Waiting for device info.")
-	for i := 0; i < 1000 && !hasError; i ++ {
+	for i := 0; i < 1000 && !hasError; i++ {
 		if f.gotDeviceInfo {
 			if f.deviceInfo.DeviceType == DeviceInvalid {
 				errorMsg = "Server is up but no device is available"
@@ -740,7 +741,7 @@ func (f *Spyserver) GetStreamingMode() uint32 {
 }
 
 // SetCallback sets the callbacks for server data
-func (f *Spyserver) SetCallback(cb *CallbackBase) {
+func (f *Spyserver) SetCallback(cb spytypes.Callback) {
 	f.callback = cb
 }
 
