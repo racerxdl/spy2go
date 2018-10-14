@@ -399,7 +399,7 @@ func (f *Spyserver) processUInt8Samples() {
 			}
 		}
 
-		f.callback.OnData(spytypes.SamplesUInt8, u8arr)
+		f.callback.OnData(spytypes.SamplesComplexUInt8, u8arr)
 	}
 }
 
