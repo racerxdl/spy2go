@@ -188,6 +188,9 @@ type deviceInfo struct {
 	MaximumGainIndex     uint32
 	MinimumFrequency     uint32
 	MaximumFrequency     uint32
+	Resolution           uint32
+	MinimumIQDecimation  uint32
+	ForcedIQFormat       uint32
 }
 
 type clientSync struct {

@@ -145,6 +145,14 @@ func (f *Device) GetName() string {
 	return f.name
 }
 
+func (f *Device) GetSerial() uint64 {
+	return f.serial
+}
+
+func (f *Device) GetPartId() uint64 {
+	return f.partId
+}
+
 func (f *Device) GetAvailableSampleRates() []uint32 {
 	return f.sampleRates
 }

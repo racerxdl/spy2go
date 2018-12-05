@@ -38,7 +38,7 @@ func (cb *MyCallback) OnData(dType int, data interface{}) {
 }
 
 func main() {
-	var ss = spyserver.MakeSpyserver("10.10.5.147", 5555)
+	var ss = spyserver.MakeSpyserver("127.0.0.1", 5555)
 
 	var cb = MyCallback{}
 
@@ -57,7 +57,7 @@ func main() {
 	for i := 0; i < len(srs); i++ {
 		log.Println(fmt.Sprintf("		%f msps", float32(srs[i]) / 1e6))
 	}
-	if ss.SetSampleRate(750000) == spyserver.InvalidValue {
+	if ss.SetSampleRate(625000) == spyserver.InvalidValue {
 		log.Println("Error setting sample rate.")
 	}
 	if ss.SetCenterFrequency(106300000) == spyserver.InvalidValue {
