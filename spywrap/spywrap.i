@@ -17,7 +17,7 @@
 %}
 
 %insert(cgo_comment_typedefs) %{
-#cgo LDFLAGS: -lairspy
+#cgo LDFLAGS: -l:libairspy.a -lusb-1.0
 %}
 
 %include "./airspy/airspy.h"

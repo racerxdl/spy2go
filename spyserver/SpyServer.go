@@ -168,7 +168,7 @@ func (f *Spyserver) onConnect() {
 	f.setSetting(settingIqFormat, []uint32{StreamFormatInt16})
 	f.setSetting(settingFFTFormat, []uint32{StreamFormatUint8})
 	f.setSetting(settingFFTDisplayPixels, []uint32{f.displayPixels})
-	f.setSetting(settingFFTDbOffset, []uint32{uint32(f.displayOffset - 50)})
+	f.setSetting(settingFFTDbOffset, []uint32{uint32(f.displayOffset)})
 	f.setSetting(settingFFTDbRange, []uint32{uint32(f.displayRange)})
 	f.setSetting(settingFFTDecimation, []uint32{1})
 
@@ -270,7 +270,7 @@ func (f *Spyserver) parseMessage(buffer []uint8) {
 			buffer = buffer[consumed:]
 
 			if f.parserPhase == parserAcquiringHeader {
-				if f.header.MessageType != msgTypeDeviceInfo && f.header.MessageType != msgTypeClientSync && f.header.MessageType != msgTypeUint8FFT {
+				if f.header.StreamType == StreamTypeIQ {
 					gap := f.header.SequenceNumber - f.lastSequenceNumber - 1
 					f.lastSequenceNumber = f.header.SequenceNumber
 					f.droppedBuffers += gap

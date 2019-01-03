@@ -299,43 +299,47 @@ func internalCallback(data interface{}, transfer spywrap.Airspy_transfer_t) int 
 	if f.cb != nil {
 		var arr interface{}
 		var stype int
-		if sampleType == spywrap.AirspySampleFloat32Iq {
+		switch sampleType {
+		case spywrap.AirspySampleFloat32Iq:
 			vArr := (*[arrLen]complex64)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]complex64, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesComplex64
-		} else if sampleType == spywrap.AirspySampleFloat32Real {
+			break
+		case spywrap.AirspySampleFloat32Real:
 			vArr := (*[arrLen]float32)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]float32, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesFloat32
-		} else if sampleType == spywrap.AirspySampleInt16Iq {
+			break
+		case spywrap.AirspySampleInt16Iq:
 			vArr := (*[arrLen]spytypes.ComplexInt16)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]spytypes.ComplexInt16, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesComplex32
-		} else if sampleType == spywrap.AirspySampleInt16Real {
+		case spywrap.AirspySampleInt16Real:
 			vArr := (*[arrLen]int16)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]int16, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesInt16
-		} else if sampleType == spywrap.AirspySampleUint16Real {
+			break
+		case spywrap.AirspySampleUint16Real:
 			vArr := (*[arrLen]uint16)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]uint16, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesUInt16
-		} else if sampleType == spywrap.AirspySampleRaw {
+		case spywrap.AirspySampleRaw:
 			vArr := (*[arrLen]byte)(unsafe.Pointer(samples))[:length:length]
 			tmpArr := make([]byte, length)
 			copy(tmpArr, vArr)
 			arr = tmpArr
 			stype = spytypes.SamplesBytes
-		} else {
+		default:
 			log.Printf("Unknown sample type received!!!!")
 			return 1
 		}

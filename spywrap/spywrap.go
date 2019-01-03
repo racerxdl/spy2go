@@ -29,7 +29,7 @@ typedef struct { void* array; intgo len; intgo cap; } _goslice_;
 
 
 
-#cgo LDFLAGS: -lairspy
+#cgo LDFLAGS: -l:libairspy.a -lusb-1.0
 
 typedef long long swig_type_1;
 typedef long long swig_type_2;
